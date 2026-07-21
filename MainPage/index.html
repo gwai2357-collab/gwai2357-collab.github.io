@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ㅈㅏㄱㅡㄱㄱㅗㅏㅂㅏㄴㅇㅡㅇ</title>
+    
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.js"></script>
+
+    <style>
+        html, body {
+            margin: 0 !important; padding: 0 !important;
+            width: 100vw !important; height: 100vh !important;
+            overflow: hidden !important; 
+        }
+
+        #canvas-container {
+            position: fixed !important; top: 0 !important; left: 0 !important;
+            width: 100vw !important; height: 100vh !important; z-index: 1 !important;
+        }
+
+        #upload-container {
+            position: fixed !important; left: 30px !important; bottom: 40px !important; 
+            z-index: 9999 !important; background: rgba(255, 255, 255, 0.9) !important;
+            padding: 12px 16px !important; border: 2px solid #000 !important;
+            border-radius: 8px !important; box-shadow: 3px 3px 0px rgba(0,0,0,0.15) !important;
+        }
+
+        #main-title {
+            position: fixed !important; top: 30px !important; left: 30px !important;
+            z-index: 9999 !important; color: #2c3036 !important; margin: 0 !important;
+        }
+
+        /* 집 캐릭터 말풍선 팝업 */
+        #speech-popup {
+            position: fixed !important; top: 0 !important; left: 0 !important;
+            width: 100vw !important; height: 100vh !important; z-index: 100000 !important; 
+            background: rgba(0,0,0,0.4) !important;
+            display: flex !important; justify-content: center !important; align-items: center !important;
+        }
+        #speech-popup.hidden { display: none !important; }
+
+        /* 🪨 조약돌 댓글 전용 모달창 스타일 */
+        #pebble-comment-popup {
+            position: fixed !important; top: 0 !important; left: 0 !important;
+            width: 100vw !important; height: 100vh !important; z-index: 100001 !important;
+            background: rgba(0, 0, 0, 0.4) !important;
+            display: flex !important; justify-content: center !important; align-items: center !important;
+        }
+        #pebble-comment-popup.hidden { display: none !important; }
+
+        .pebble-modal-card {
+            position: relative;
+            width: 360px;
+            max-height: 80vh;
+            background: #ffffff;
+            border: 2px solid #000000;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 6px 6px 0px rgba(0, 0, 0, 1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .pebble-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #000;
+            padding-bottom: 10px;
+            margin-bottom: 12px;
+        }
+
+        .pebble-modal-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #2c3036;
+        }
+
+        .pebble-close-btn {
+            background: none; border: none; font-size: 1.4rem; font-weight: bold; cursor: pointer;
+        }
+
+        .pebble-comment-list {
+            flex: 1;
+            overflow-y: auto;
+            max-height: 240px;
+            margin-bottom: 15px;
+            padding-right: 4px;
+        }
+
+        .comment-item {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 8px;
+            font-size: 0.88rem;
+        }
+
+        .comment-item-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.78rem;
+            color: #64748b;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+
+        .comment-text {
+            color: #1e293b;
+            word-break: break-all;
+            line-height: 1.35;
+        }
+
+        .pebble-input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .pebble-input-row {
+            display: flex;
+            gap: 6px;
+        }
+
+        .pebble-input-group input {
+            padding: 8px 12px;
+            border: 1.5px solid #000;
+            border-radius: 6px;
+            font-size: 0.88rem;
+            outline: none;
+        }
+
+        #pebble-nickname-input {
+            width: 100px;
+        }
+
+        #pebble-comment-input {
+            flex: 1;
+        }
+
+        .pebble-input-group button {
+            width: 100%;
+            padding: 9px 14px;
+            background: #2c3036;
+            color: #fff;
+            border: 1.5px solid #000;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .pebble-input-group button:hover { background: #000; }
+    </style>
+</head>
+<body>
+
+    <h1 id="main-title">ㅈㅏㄱㅡㄱㄱㅗㅏㅂㅏㄴㅇㅡㅇ</h1>
+    <div id="canvas-container"></div>
+    <div id="upload-container">
+        <input type="file" id="image-uploader" accept="image/png, image/jpeg, image/jpg, image/gif">
+    </div>
+
+    <!-- 집 캐릭터 팝업 모달창 -->
+    <div id="speech-popup" class="hidden">
+        <div class="popup-content">
+            <button id="popup-close-btn">&times;</button>
+            <img class="popup-img" src="https://via.placeholder.com/260x180" style="width: 100%; border-radius: 6px; margin-bottom: 12px;">
+            <p class="popup-text" style="text-align: center; font-weight: bold; margin: 0;">테스트입니다 -자극과반응</p>
+        </div>
+    </div>
+
+    <!-- 🪨 조약돌 댓글 전용 팝업 모달창 -->
+    <div id="pebble-comment-popup" class="hidden">
+        <div class="pebble-modal-card">
+            <div class="pebble-modal-header">
+                <span class="pebble-modal-title">🪨 조약돌 방명록</span>
+                <button id="pebble-popup-close-btn" class="pebble-close-btn">&times;</button>
+            </div>
+            <div id="pebble-comment-list" class="pebble-comment-list">
+                <!-- 자바스크립트로 댓글 목록이 삽입됨 -->
+            </div>
+            <div class="pebble-input-group">
+                <div class="pebble-input-row">
+                    <input type="text" id="pebble-nickname-input" placeholder="닉네임" maxlength="15">
+                    <input type="text" id="pebble-comment-input" placeholder="방명록 남기기..." maxlength="100">
+                </div>
+                <button id="pebble-comment-submit-btn">작성하기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 스크립트 로드 -->
+    <script src="js/main.js"></script>
+    <script src="js/HouseChar.js"></script>
+    <script src="js/PebbleChar.js"></script>
+    <script src="js/sketch.js"></script>
+</body>
+</html>
