@@ -1,2 +1,0 @@
-# MainPage
-web_mainpage
