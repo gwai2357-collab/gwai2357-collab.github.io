@@ -198,3 +198,138 @@
     <script src="js/sketch.js"></script>
 </body>
 </html>
+
+<!-- 1. HTML: 팝업 오버레이 및 입력 폼 (평상시 숨김) -->
+<div id="guestbookPopup" class="guestbook-overlay" style="display: none;">
+  <div class="pebble-guestbook">
+    <button onclick="closeGuestbookPopup()" class="guestbook-close-btn">✕</button>
+    <h3 class="guestbook-title">조약돌에 방명록 남기기</h3>
+    
+    <input type="text" id="nicknameInput" class="guestbook-input" placeholder="닉네임" />
+    <textarea id="commentInput" class="guestbook-textarea" placeholder="어떤 이야기를 남기고 싶으신가요?" rows="3"></textarea>
+    
+    <button onclick="submitComment()" class="guestbook-submit-btn">등록하기</button>
+  </div>
+</div>
+
+<!-- 2. CSS: 팝업 형태로 화면 중앙에 띄우기 위한 스타일 -->
+<style>
+  /* 팝업 뒷배경 (어둡게 처리) */
+  .guestbook-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.4);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999; /* 화면 맨 앞으로 가져오기 */
+  }
+
+  .pebble-guestbook {
+    position: relative;
+    width: 90%;
+    max-width: 400px;
+    padding: 24px;
+    background-color: #f9f9f9;
+    border-radius: 20px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    font-family: sans-serif;
+  }
+
+  .guestbook-close-btn {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    color: #666;
+  }
+
+  .guestbook-title {
+    margin-top: 0;
+    margin-bottom: 16px;
+    font-size: 18px;
+    color: #333;
+  }
+
+  .guestbook-input,
+  .guestbook-textarea {
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 12px;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    font-size: 14px;
+    outline: none;
+  }
+
+  .guestbook-textarea {
+    resize: none;
+  }
+
+  .guestbook-submit-btn {
+    width: 100%;
+    padding: 12px;
+    background-color: #333;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+</style>
+
+<!-- 3. JavaScript: 팝업 열기/닫기 및 Make.com 전송 -->
+<script>
+  // 팝업 열기 함수
+  function openGuestbookPopup() {
+    document.getElementById('guestbookPopup').style.display = 'flex';
+  }
+
+  // 팝업 닫기 함수
+  function closeGuestbookPopup() {
+    document.getElementById('guestbookPopup').style.display = 'none';
+    // 닫을 때 입력창 초기화
+    document.getElementById('nicknameInput').value = '';
+    document.getElementById('commentInput').value = '';
+  }
+
+  // 댓글 제출 함수
+  async function submitComment() {
+    const nickname = document.getElementById('nicknameInput').value.trim();
+    const comment = document.getElementById('commentInput').value.trim();
+
+    if (!nickname || !comment) {
+      alert("닉네임과 댓글을 모두 입력해 주세요!");
+      return;
+    }
+
+    const webhookUrl = 'https://hook.us2.make.com/m5w1ac79jku4xaptesullimwrs281prx';
+    const payload = { nickname: nickname, comment: comment };
+
+    try {
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (response.ok) {
+        alert("댓글이 성공적으로 전달되었습니다!");
+        closeGuestbookPopup(); // 성공 시 팝업 창 자동으로 닫기
+      } else {
+        alert("서버 오류로 전송에 실패했습니다.");
+      }
+    } catch (error) {
+      console.error('전송 에러:', error);
+      alert("인터넷 연결 등을 확인해 주세요.");
+    }
+  }
+</script>

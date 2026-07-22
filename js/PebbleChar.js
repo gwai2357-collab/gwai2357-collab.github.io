@@ -1,5 +1,3 @@
-// js/PebbleChar.js
-
 class PebbleChar {
   constructor(x, y, scale = 1.0) {
     this.charScale = scale;
@@ -70,18 +68,8 @@ class PebbleChar {
     this.hitY = this.cy;
 
     this.renderItems = [];
-
-    // 댓글 데이터 로드
-    try {
-      const savedComments = localStorage.getItem('pebble_comments');
-      this.comments = savedComments ? JSON.parse(savedComments) : [
-        { nickname: "주인장", text: "조약돌에 첫 흔적을 남겨보세요!", timestamp: new Date().toISOString() }
-      ];
-    } catch(e) {
-      this.comments = [{ nickname: "주인장", text: "조약돌에 첫 흔적을 남겨보세요!", timestamp: new Date().toISOString() }];
-    }
     
-    this.initCommentDOM();
+    // 🧹 [정리 완료] 기존 로컬 스토리지 댓글 로딩 및 DOM 초기화 코드 제거됨
   }
 
   applyDrag(deltaX) { }
@@ -321,8 +309,12 @@ class PebbleChar {
 
     let hitRadius = (this.bw * 0.6) * this.charScale * this.bubbleScale;
     let dToBubble = dist(mx, my, this.hitX, this.hitY);
+    
+    // 🚀 [핵심 변경점] 말풍선 클릭 시 HTML의 새 팝업 띄우기 함수 호출
     if (dToBubble < hitRadius) {
-      this.openCommentModal();
+      if (typeof openGuestbookPopup === 'function') {
+        openGuestbookPopup(); 
+      }
       return true;
     }
 
@@ -348,98 +340,5 @@ class PebbleChar {
     const ratioX = this.rawX / this.virtualWidthRef;
     const ratioY = this.cy / (window.innerHeight || 800);
     localStorage.setItem('pebble_position_ratio', JSON.stringify({ rx: ratioX, ry: ratioY }));
-  }
-
-  initCommentDOM() {
-    const closeBtn = document.getElementById('pebble-popup-close-btn');
-    const submitBtn = document.getElementById('pebble-comment-submit-btn');
-    const input = document.getElementById('pebble-comment-input');
-    const nickInput = document.getElementById('pebble-nickname-input');
-
-    if (closeBtn) closeBtn.onclick = () => this.closeCommentModal();
-    if (submitBtn) submitBtn.onclick = () => this.addComment();
-    
-    const handleEnter = (e) => {
-      if (e.key === 'Enter') this.addComment();
-    };
-
-    if (input) input.onkeypress = handleEnter;
-    if (nickInput) nickInput.onkeypress = handleEnter;
-  }
-
-  openCommentModal() {
-    const modal = document.getElementById('pebble-comment-popup');
-    if (modal) {
-      this.renderCommentList();
-      modal.classList.remove('hidden');
-    }
-  }
-
-  closeCommentModal() {
-    const modal = document.getElementById('pebble-comment-popup');
-    if (modal) modal.classList.add('hidden');
-  }
-
-  addComment() {
-    const input = document.getElementById('pebble-comment-input');
-    const nickInput = document.getElementById('pebble-nickname-input');
-    
-    if (!input || !input.value.trim()) return;
-
-    const nickname = nickInput && nickInput.value.trim() !== '' ? nickInput.value.trim() : '익명';
-    const text = input.value.trim();
-
-    const newComment = {
-      nickname: nickname,
-      text: text,
-      timestamp: new Date().toISOString()
-    };
-
-    this.comments.unshift(newComment);
-    localStorage.setItem('pebble_comments', JSON.stringify(this.comments));
-    
-    input.value = '';
-    this.renderCommentList();
-  }
-
-  renderCommentList() {
-    const listContainer = document.getElementById('pebble-comment-list');
-    if (!listContainer) return;
-
-    listContainer.innerHTML = '';
-    this.comments.forEach(c => {
-      const item = document.createElement('div');
-      item.className = 'comment-item';
-      
-      const timeStr = this.formatRelativeTime(c.timestamp);
-      const safeNick = this.escapeHTML(c.nickname || '익명');
-      const safeText = this.escapeHTML(c.text || '');
-
-      item.innerHTML = `
-        <div class="comment-item-header">
-          <span>${safeNick}</span>
-          <span>${timeStr}</span>
-        </div>
-        <div class="comment-text">${safeText}</div>
-      `;
-      listContainer.appendChild(item);
-    });
-  }
-
-  formatRelativeTime(isoString) {
-    const date = new Date(isoString);
-    const now = new Date();
-    const diffSec = Math.floor((now - date) / 1000);
-
-    if (diffSec < 60) return '방금 전';
-    if (diffSec < 3600) return `${Math.floor(diffSec / 60)}분 전`;
-    if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}시간 전`;
-    return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`;
-  }
-
-  escapeHTML(str) {
-    return str.replace(/[&<>'"]/g, 
-      tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
-    );
   }
 }
