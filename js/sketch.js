@@ -10,18 +10,19 @@ let preDragOffsetX = 0;
 let virtualWidth = 5000;     
 let lastFrameTime = 0;       
 
-// 🌿 [잔디 관련 기능 보관 주석]
-/*
-let spawnRadiusX = 150;      
-let spawnRadiusY = 80;       
-let minSproutSize = 10;      
-let maxSproutSize = 30;      
-let growthSpeed = 0.08;      
-let sprouts = [];            
-*/
+// 🚀 관성(가속도)을 위한 속도 변수 추가
+let velocityX = 0;           
 
 let house;
 let pebble;
+let flipbooks = [];
+
+let clickStartX = 0;
+let clickStartY = 0;
+
+// 🔭 스크롤 줌 & 스프링 탄력 변수
+let zoomLevel = 1.0;
+let targetZoom = 1.0;
 
 function setup() {
     let canvas = createCanvas(windowWidth, windowHeight);
@@ -31,28 +32,58 @@ function setup() {
     house = new HouseChar(width / 2, height / 2 + 50, 0.7);
     pebble = new PebbleChar(width / 2 + 350, height / 2 + 50, 0.85);
 
-    window.receiveExternalImage = function(dataUrl, rawW, rawH, captionText) {
-        loadImage(dataUrl, (p5Img) => {
-            let baseDim = 350 * imageGlobalScale;
-            let finalW = baseDim; let finalH = baseDim;
-            if (rawW > rawH) { finalH = baseDim * (rawH / rawW); } 
-            else { finalW = baseDim * (rawW / rawH); }
-
-            let nextX = random(200, 400) - offsetX; 
-            if (boxes.length > 0) {
-                let lastBox = boxes[boxes.length - 1];
-                nextX = lastBox.rawX + lastBox.w + random(-50, 200);
-            }
-            if (nextX > virtualWidth - finalW - 200) { virtualWidth += 600; }
-            let nextY = random(120, height - finalH - 150);
-
-            boxes.push({
-                rawX: nextX, x: nextX, y: nextY, w: finalW, h: finalH,
-                cx: nextX + finalW / 2, cy: nextY + finalH / 2,
-                scrollFactor: random(0.6, 1.2), img: p5Img, caption: captionText 
+    // 1. 플립북 데이터(JSON) 로드
+    fetch('data/flipbook.json')
+        .then(response => response.json())
+        .then(data => {
+            data.forEach((item) => {
+                let fb = new Flipbook(item.x, item.y, 1.2); 
+                fb.loadFrames(item.frames);
+                
+                fb.srcPath = item.frames[0]; 
+                fb.caption = item.caption || ""; 
+                fb.detailCaption = item.detailCaption || "상세 설명이 없습니다.";
+                flipbooks.push(fb); 
+                
+                if (item.x > virtualWidth - 1000) virtualWidth = item.x + 1500;
             });
-        });
-    };
+        })
+        .catch(err => console.error("플립북 연동 실패:", err));
+
+    // 2. 일반 사진 및 캡션 데이터(JSON) 로드
+    fetch('data/content.json')
+        .then(response => response.json())
+        .then(data => {
+            data.forEach(item => {
+                loadImage(item.imagePath, (p5Img) => {
+                    let baseDim = 350 * imageGlobalScale;
+                    let finalW = baseDim; let finalH = baseDim;
+                    let rawW = p5Img.width; let rawH = p5Img.height;
+                    
+                    if (rawW > rawH) { finalH = baseDim * (rawH / rawW); } 
+                    else { finalW = baseDim * (rawW / rawH); }
+
+                    let nextX = random(200, 400) - offsetX; 
+                    if (boxes.length > 0) {
+                        let lastBox = boxes[boxes.length - 1];
+                        nextX = lastBox.rawX + lastBox.w + random(-50, 200);
+                    }
+                    if (nextX > virtualWidth - finalW - 200) { virtualWidth += 600; }
+                    let nextY = random(120, height - finalH - 150);
+
+                    boxes.push({
+                        rawX: nextX, x: nextX, y: nextY, w: finalW, h: finalH,
+                        cx: nextX + finalW / 2, cy: nextY + finalH / 2,
+                        scrollFactor: random(0.6, 1.2), 
+                        img: p5Img, 
+                        caption: item.caption || "",
+                        detailCaption: item.detailCaption || "상세 설명이 없습니다.",
+                        srcPath: item.imagePath
+                    });
+                });
+            });
+        })
+        .catch(err => console.error("데이터 연동 실패:", err));
 
     const popup = document.getElementById('speech-popup');
     const closeBtn = document.getElementById('popup-close-btn');
@@ -61,52 +92,113 @@ function setup() {
     }
 }
 
+// 🔭 마우스 휠 스크롤 시 줌아웃 트리거
+function mouseWheel(event) {
+    let detailModal = document.getElementById('image-detail-modal');
+    let guestbookModal = document.getElementById('guestbookPopup');
+    if ((detailModal && detailModal.style.display === 'flex') || 
+        (guestbookModal && guestbookModal.style.display === 'flex')) {
+        return;
+    }
+
+    // 💡 [축소 범위 조절]: 아래의 '0.78' 숫자를 더 낮추면(예: 0.5) 더 많이 축소됩니다!
+    targetZoom -= event.delta * 0.0008;
+    targetZoom = constrain(targetZoom, 0.1, 1.0);
+    return false; 
+}
+
 function draw() {
     background(255); 
 
-    let isOverUI = mouseX < 340 && mouseY > height - 220; 
     let currentTime = millis();
     let dt = currentTime - lastFrameTime;
     lastFrameTime = currentTime;
 
-    // 🌿 [잔디 관련 기능 보관 주석] 새싹 타이머 업데이트
-    /*
-    for (let i = sprouts.length - 1; i >= 0; i--) {
-        sprouts[i].update(); 
-        if (currentTime - sprouts[i].spawnTime > 20000) { sprouts.splice(i, 1); }
-    }
-    */
+    // 스프링 물리: 휠 동작이 멈추면 원래 크기로 복귀
+    targetZoom = lerp(targetZoom, 1.0, 0.08);
+    zoomLevel = lerp(zoomLevel, targetZoom, 0.3);
 
-    // 화면 무한 드래그 (조약돌 잡는 중이 아닐 때만 적용)
-    if (mouseIsPressed && !isOverUI && !pebble.isDragging) {
+    // 🌫️ 화이트 헤이즈 오버레이 투명도 동기화 (최소 줌 제한인 0.78과 연동)
+    let hazeEl = document.getElementById('haze-overlay');
+    if (hazeEl) {
+        let hazeVal = map(zoomLevel, 1.0, 0.1, 0, 0.92);
+        hazeEl.style.opacity = hazeVal;
+    }
+
+    let detailModal = document.getElementById('image-detail-modal');
+    let guestbookModal = document.getElementById('guestbookPopup');
+    let isDetailModalOpen = detailModal && detailModal.style.display === 'flex';
+    let isGuestbookOpen = guestbookModal && guestbookModal.style.display === 'flex';
+    let isOverUI = isDetailModalOpen || isGuestbookOpen;
+
+    // 🚀 [관성 드래그 물리 로직]
+    let oldOffsetX = offsetX;
+
+    if (mouseIsPressed && !isOverUI && !pebble.isDragging && abs(zoomLevel - 1.0) < 0.01) {
         if (!isDraggingSpace) {
             isDraggingSpace = true;
-            dragStartX = mouseX; preDragOffsetX = offsetX;
+            dragStartX = mouseX; 
+            preDragOffsetX = offsetX;
+            velocityX = 0; // 드래그 시작 시 기존 관성 초기화
         }
-        let deltaX = mouseX - dragStartX;
-        offsetX = constrain(preDragOffsetX + deltaX, -(virtualWidth - width), 0);
-        let currentDeltaX = offsetX - preDragOffsetX;
+        let targetOffset = preDragOffsetX + (mouseX - dragStartX);
         
+        // 마우스를 따라가며 실시간 속도를 누적 (관성 생성)
+        velocityX = (targetOffset - offsetX) * 0.6; 
+        offsetX = targetOffset;
+        offsetX = constrain(offsetX, -(virtualWidth - width), 0);
+    } else { 
+        isDraggingSpace = false;
+        
+        // 마우스를 떼었을 때 미끄러지는 관성(가속도) 적용
+        if (abs(velocityX) > 0.05) {
+            offsetX += velocityX;
+            // 💡 [마찰력 조절]: 0.88 숫자를 0.95에 가깝게 키우면 마찰력이 줄어들어 더 멀리, 오래 미끄러집니다!
+            velocityX *= 0.93; 
+            offsetX = constrain(offsetX, -(virtualWidth - width), 0);
+        }
+    }
+
+    let currentDeltaX = offsetX - oldOffsetX;
+    if (abs(currentDeltaX) > 0.001) {
         house.applyDrag(currentDeltaX);
-        preDragOffsetX = offsetX; dragStartX = mouseX;
-    } else { isDraggingSpace = false; }
+    }
 
     for (let b of boxes) {
         b.x = b.rawX + offsetX * b.scrollFactor; 
         b.cx = b.x + b.w / 2; b.cy = b.y + b.h / 2;
     }
 
+    // 축소 상태를 고려한 가상의 월드 마우스 좌표 계산
+    let worldMouseX = (mouseX - width / 2) / zoomLevel + width / 2;
+    let worldMouseY = (mouseY - height / 2) / zoomLevel + height / 2;
+
+    for (let fb of flipbooks) {
+        fb.update(worldMouseX, offsetX);
+    }
+
+    let allObstacles = [...boxes];
+    for (let fb of flipbooks) {
+        let fbBox = fb.getCollisionBox(offsetX);
+        if (fbBox) allObstacles.push(fbBox);
+    }
+
     let popup = document.getElementById('speech-popup');
     let isHousePopupOpen = popup && !popup.classList.contains('hidden');
 
-    // 캐릭터 업데이트 (pebble에 boxes 정보 전달하여 가림 감지)
-    house.update(mouseX, mouseY, isOverUI, isHousePopupOpen, boxes, dt, currentTime);
-    pebble.update(mouseX, mouseY, offsetX, boxes);
+    house.update(worldMouseX, worldMouseY, isOverUI, isHousePopupOpen, allObstacles, dt, currentTime);
+    pebble.update(worldMouseX, worldMouseY, offsetX, allObstacles);
 
-    // Depth Sorting 렌더 큐
+    // ==========================================
+    // 🏛️ 화면 전체 줌 및 공간감 적용 영역 시작
+    // ==========================================
+    push();
+    translate(width / 2, height / 2);
+    scale(zoomLevel);
+    translate(-width / 2, -height / 2);
+
     let renderQueue = [];
 
-    // 박스 추가
     for (let b of boxes) {
         renderQueue.push({
             y: b.y + b.h / 2,
@@ -123,73 +215,115 @@ function draw() {
         });
     }
 
-    // 🌿 [잔디 관련 기능 보관 주석] 새싹 렌더 큐 추가
-    // for (let spr of sprouts) { renderQueue.push({ y: spr.y, render: () => { spr.display(); } }); }
+    for (let fb of flipbooks) {
+        renderQueue = renderQueue.concat(fb.getRenderItems(offsetX));
+    }
 
-    // 캐릭터 렌더 큐 병합 (돌은 y = -99999로 설정되어 있어 이미지보다 무조건 아래 그려집니다)
     renderQueue = renderQueue.concat(house.getRenderItems());
     renderQueue = renderQueue.concat(pebble.getRenderItems());
 
-    // Y축 깊이 정렬 후 순서대로 출력
     renderQueue = renderQueue.filter(item => !isNaN(item.y) && isFinite(item.y));
     renderQueue.sort((a, b) => a.y - b.y);
     for (let item of renderQueue) { item.render(); }
 
-    // 최상단 말풍선 및 가림 감지 '!' 표시 렌더링
-    house.drawTopLayer(mouseX, mouseY);
-    pebble.drawTopLayer(mouseX, mouseY);
+    house.drawTopLayer(worldMouseX, worldMouseY);
+    pebble.drawTopLayer(worldMouseX, worldMouseY);
+
+    pop();
+    // ==========================================
+    // 🏛️ 줌 영역 끝
+    // ==========================================
+
+    // 커스텀 커서 호버 판정
+    if (!isOverUI) {
+        let isHoveringSomething = false;
+
+        if (house && typeof house.checkBubbleClick === 'function') {
+            if (house.checkBubbleClick(worldMouseX, worldMouseY)) {
+                isHoveringSomething = true;
+            }
+        }
+
+        if (pebble && pebble.x !== undefined && pebble.y !== undefined) {
+            if (dist(worldMouseX, worldMouseY, pebble.x, pebble.y) < 45) {
+                isHoveringSomething = true;
+            }
+        }
+
+        for (let item of allObstacles) {
+            if (worldMouseX >= item.x && worldMouseX <= item.x + item.w &&
+                worldMouseY >= item.y && worldMouseY <= item.y + item.h) {
+                isHoveringSomething = true;
+                break;
+            }
+        }
+
+        if (typeof window.setCursorHover === 'function') {
+            window.setCursorHover(isHoveringSomething);
+        }
+    }
 }
 
 function mousePressed() {
-    // 1. 조약돌 클릭 감지 (드래그 시작 / 모달 / 가림 '!' 클릭)
-    if (pebble.checkPress(mouseX, mouseY)) {
-        return false;
-    }
+    let detailModal = document.getElementById('image-detail-modal');
+    if (detailModal && detailModal.style.display === 'flex') return;
 
-    // 2. 집 캐릭터 말풍선 클릭 감지
-    if (house.checkBubbleClick(mouseX, mouseY)) {
+    clickStartX = mouseX;
+    clickStartY = mouseY;
+
+    let worldMouseX = (mouseX - width / 2) / zoomLevel + width / 2;
+    let worldMouseY = (mouseY - height / 2) / zoomLevel + height / 2;
+
+    if (pebble.checkPress(worldMouseX, worldMouseY)) return false;
+    if (house.checkBubbleClick(worldMouseX, worldMouseY)) {
         let popup = document.getElementById('speech-popup');
         if (popup) popup.classList.remove('hidden');
         return false;
     }
+}
 
-    // 🌿 [잔디 관련 기능 보관 주석] 클릭 시 새싹 스폰
-    /*
-    let isOverUI = mouseX < 340 && mouseY > height - 220;
-    if (!isOverUI) {
-        for (let i = 0; i < floor(random(1, 4)); i++) { 
-            spawnSprout(house.cx + house.spawnOffsetX, house.cy + house.spawnOffsetY); 
+function mouseReleased() { 
+    let detailModal = document.getElementById('image-detail-modal');
+    if (detailModal && detailModal.style.display === 'flex') return;
+
+    pebble.checkRelease(); 
+
+    if (dist(clickStartX, clickStartY, mouseX, mouseY) < 5) {
+        let worldMouseX = (mouseX - width / 2) / zoomLevel + width / 2;
+        let worldMouseY = (mouseY - height / 2) / zoomLevel + height / 2;
+
+        let clickableItems = [];
+        
+        for (let b of boxes) {
+            clickableItems.push({
+                x: b.x, y: b.y, w: b.w, h: b.h, depthY: b.y + b.h / 2,
+                srcPath: b.srcPath, detailCaption: b.detailCaption
+            });
+        }
+        
+        for (let fb of flipbooks) {
+            let fbBox = fb.getCollisionBox(offsetX);
+            if (fbBox) {
+                clickableItems.push({
+                    x: fbBox.x, y: fbBox.y, w: fbBox.w, h: fbBox.h, depthY: fbBox.cy,
+                    srcPath: fb.srcPath, detailCaption: fb.detailCaption
+                });
+            }
+        }
+
+        clickableItems.sort((a, b) => b.depthY - a.depthY);
+
+        for (let item of clickableItems) {
+            if (worldMouseX >= item.x && worldMouseX <= item.x + item.w &&
+                worldMouseY >= item.y && worldMouseY <= item.y + item.h) {
+                
+                if (typeof openImageModal === 'function') {
+                    openImageModal(item.srcPath, item.detailCaption);
+                }
+                break;
+            }
         }
     }
-    */
 }
-
-function mouseReleased() {
-    pebble.checkRelease();
-}
-
-// 🌿 [잔디 관련 기능 보관 주석] Sprout 클래스
-/*
-function spawnSprout(baseX, baseY) {
-    let r = random(0, 1); let theta = random(0, TWO_PI);
-    let x = baseX + spawnRadiusX * r * cos(theta); let y = baseY + spawnRadiusY * r * sin(theta);
-    sprouts.push(new Sprout(x, y, random(minSproutSize, maxSproutSize) * house.charScale));
-}
-
-class Sprout {
-    constructor(x, y, targetSize) {
-        this.x = x; this.y = y; this.targetSize = targetSize; this.currentSize = 0;
-        this.spawnTime = millis(); this.type = floor(random(0, 3)); this.rot = random(-0.2, 0.2);
-    }
-    update() { if (this.currentSize < this.targetSize) this.currentSize += growthSpeed * (this.targetSize - this.currentSize); }
-    display() {
-        push(); translate(this.x, this.y); rotate(this.rot); stroke(0); strokeWeight(1.5 * house.charScale); fill(255); 
-        if (this.type === 0) { beginShape(); vertex(0, 0); bezierVertex(-this.currentSize*0.3, -this.currentSize*0.5, -this.currentSize*0.3, -this.currentSize, 0, -this.currentSize); bezierVertex(this.currentSize*0.3, -this.currentSize, this.currentSize*0.3, -this.currentSize*0.5, 0, 0); endShape(CLOSE); } 
-        else if (this.type === 1) { beginShape(); vertex(0, 0); bezierVertex(-this.currentSize*0.4, -this.currentSize*0.4, -this.currentSize*0.5, -this.currentSize*0.8, -this.currentSize*0.3, -this.currentSize*0.9); bezierVertex(-this.currentSize*0.2, -this.currentSize*0.6, -this.currentSize*0.1, -this.currentSize*0.3, 0, 0); endShape(CLOSE); beginShape(); vertex(0, 0); bezierVertex(this.currentSize*0.4, -this.currentSize*0.4, this.currentSize*0.5, -this.currentSize*0.8, this.currentSize*0.3, -this.currentSize*0.9); bezierVertex(this.currentSize*0.2, -this.currentSize*0.6, this.currentSize*0.1, -this.currentSize*0.3, 0, 0); endShape(CLOSE); } 
-        else { line(0, 0, 0, -this.currentSize); line(0, 0, -this.currentSize*0.4, -this.currentSize*0.8); line(0, 0, this.currentSize*0.4, -this.currentSize*0.8); }
-        pop();
-    }
-}
-*/
 
 function windowResized() { resizeCanvas(windowWidth, windowHeight); }

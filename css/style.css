@@ -1,75 +1,47 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
-/* style.css 상단 부분 수정 */
 
 html, body {
-    width: 100%;
-    height: 100%;
-    margin: 0;
-    padding: 0;
-    overflow: hidden; /* 화면 밖으로 나가는 스크롤 완벽 차단 */
-    background-color: #ffffff; 
+    width: 100vw !important;
+    height: 100vh !important;
+    overflow: hidden !important;
+    background-color: #ffffff;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     user-select: none;
     -webkit-user-select: none;
 }
 
-/* p5.js 캔버스 컨테이너도 100% 동적 추적 */
-#canvas-container { 
-    position: absolute; 
-    top: 0; 
-    left: 0; 
-    width: 100%; 
-    height: 100%; 
-    z-index: 1; 
+#canvas-container {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 1 !important;
 }
 
-/* 하단 업로드 UI 위치 보정 (bottom: 20px로 여백을 살짝 끌어올림) */
-#upload-container {
-    position: fixed;
-    left: 30px;
-    bottom: 40px; /* 모니터 하단 구석에 안정적으로 들어오도록 조정 */
-    z-index: 20;
-    background: #ffffff;
-    padding: 10px 14px;
-    border: 2px solid #000000;
-    border-radius: 8px;
-    box-shadow: 4px 4px 0px rgba(0, 0, 0, 1);
-    display: flex;
-    align-items: center;
-    gap: 8px;
+#main-title {
+    position: fixed !important;
+    top: 30px !important;
+    left: 30px !important;
+    z-index: 9999 !important;
+    color: #2c3036 !important;
+    margin: 0 !important;
 }
 
-.upload-label {
-    font-size: 13px;
-    font-weight: 600;
-    color: #000000;
-}
-
-#image-uploader {
-    font-size: 13px;
-    cursor: pointer;
-}
-
-/* 말풍선 미니 팝업 모달창 */
+/* ================= 집 캐릭터 팝업 ================= */
 #speech-popup {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: 100;
-    background: rgba(0, 0, 0, 0.3);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    transition: opacity 0.2s ease, visibility 0.2s ease;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 100000 !important;
+    background: rgba(0, 0, 0, 0.4) !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
 }
-
-#speech-popup.hidden {
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-}
+#speech-popup.hidden { display: none !important; }
 
 .popup-content {
     position: relative;
@@ -79,6 +51,7 @@ html, body {
     border-radius: 12px;
     padding: 20px 16px 16px 16px;
     box-shadow: 6px 6px 0px rgba(0, 0, 0, 1);
+    text-align: center;
 }
 
 #popup-close-btn {
@@ -91,35 +64,157 @@ html, body {
     font-weight: bold;
     color: #000000;
     cursor: pointer;
-    line-height: 1;
 }
 
-.popup-body {
+/* ================= 조약돌 방명록 팝업 ================= */
+.guestbook-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    background-color: rgba(0, 0, 0, 0.4);
     display: flex;
-    flex-direction: column;
+    justify-content: center;
     align-items: center;
-    text-align: center;
-    margin-top: 8px;
+    z-index: 99999;
 }
 
-.popup-img {
-    width: 100%;
-    height: auto;
-    border-radius: 6px;
-    border: 1px solid #e2e8f0;
-    margin-bottom: 12px;
+.pebble-guestbook {
+    position: relative;
+    width: 90%;
+    max-width: 400px;
+    padding: 24px;
+    background-color: #ffffff;
+    border: 2px solid #000;
+    border-radius: 12px;
+    box-shadow: 6px 6px 0px rgba(0, 0, 0, 1);
 }
 
-.popup-text {
+.guestbook-close-btn {
+    position: absolute;
+    top: 16px; right: 16px;
+    background: none; border: none;
+    font-size: 18px; font-weight: bold;
+    cursor: pointer; color: #000;
+}
+
+.guestbook-title {
+    margin-top: 0; margin-bottom: 16px;
+    font-size: 1.1rem; color: #333; font-weight: bold;
+}
+
+.guestbook-input, .guestbook-textarea {
+    width: 100%; box-sizing: border-box;
+    margin-bottom: 12px; padding: 12px;
+    border: 1.5px solid #000; border-radius: 8px;
+    font-size: 14px; outline: none; font-family: inherit;
+}
+
+.guestbook-textarea { resize: none; }
+
+.guestbook-submit-btn {
+    width: 100%; padding: 12px;
+    background-color: #2c3036; color: white;
+    border: 1.5px solid #000; border-radius: 8px;
+    font-size: 15px; font-weight: bold; cursor: pointer;
+}
+.guestbook-submit-btn:hover { background-color: #000; }
+
+/* ================= 사진 상세 모달 ================= */
+.image-modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background-color: rgba(0, 0, 0, 0.85); /* 뒷배경 어둡게 */
+    display: flex; justify-content: center; align-items: center;
+    z-index: 100005; /* 화면 제일 위로 */
+}
+
+.image-modal-content {
+    position: relative;
+    max-width: 90%; max-height: 90vh;
+    background: #ffffff;
+    padding: 40px 30px 30px 30px;
+    border-radius: 12px;
+    display: flex; flex-direction: column; align-items: center;
+    box-shadow: 0px 10px 30px rgba(0,0,0,0.5);
+}
+
+.image-modal-close-btn {
+    position: absolute; top: 10px; right: 20px;
+    background: none; border: none; font-size: 32px;
+    font-weight: bold; cursor: pointer; color: #333;
+}
+
+#detail-modal-img {
+    max-width: 100%; 
+    max-height: 55vh; /* 화면 높이의 55%까지만 커지도록 제한 */
+    object-fit: contain; 
+    border-radius: 4px;
+    border: 1px solid #ddd;
+}
+
+.image-modal-caption {
+    margin-top: 20px; 
+    font-size: 0.95rem; color: #333;
+    text-align: center; 
+    white-space: pre-wrap; /* 엔터키(두 줄 이상)를 그대로 유지해줌 */
+    max-width: 500px; 
+    line-height: 1.6;
+}
+
+.image-modal-more-btn {
+    margin-top: 20px; 
+    padding: 10px 36px;
+    background-color: #2c3036; 
+    color: #ffffff;
+    text-decoration: none; 
+    border-radius: 8px;
     font-size: 0.9rem;
-    font-weight: 600;
-    color: #1e293b;
+    font-weight: bold; 
+    transition: background 0.2s;
 }
 
-html, body {
-    width: 100vw;
-    height: 100vh;
-    margin: 0;
-    padding: 0;
-    overflow: hidden; /* 화면 밖으로 스크롤 생기는 것을 강제로 막음 */
+.image-modal-more-btn:hover {
+    background-color: #000000;
+}
+
+/* ================= 커스텀 커서 ================= */
+/* 진짜 마우스 숨기기 (단, 글자 입력창은 제외) */
+body, button, a, img, canvas {
+    cursor: none !important; 
+}
+
+#custom-cursor {
+    position: fixed;
+    top: 0; left: 0;
+    width: 20px; height: 20px;
+    background-color: #333; /* 1. 기본 상태: 까만 동그라미 */
+    border-radius: 50%;
+    pointer-events: none; /* 커서가 클릭을 방해하지 않도록 통과시킴 */
+    z-index: 9999999; /* 화면 제일 위로 */
+    transform: translate(-50%, -50%); /* 마우스 끝점에 동그라미 중심 맞추기 */
+    transition: width 0.15s ease, height 0.15s ease, background-color 0.15s ease;
+}
+
+/* 2. Hover 상태 (사진이나 버튼 위에 올라갔을 때) */
+#custom-cursor.hover {
+    width: 45px; height: 45px;
+    background-color: rgba(255, 80, 80, 0.6); /* 반투명한 빨간색으로 커짐 */
+    border: 2px solid #ff5050;
+}
+
+/* 3. Active 상태 (마우스를 꾹 누르고 있을 때) */
+#custom-cursor.active {
+    width: 12px; height: 12px;
+    background-color: #000; /* 작고 단단해짐 */
+}
+
+/* ================= 화이트 헤이즈 & 엣지 그라디언트 ================= */
+#haze-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    pointer-events: none; /* 마우스 클릭을 방해하지 않음 */
+    z-index: 999; /* 캔버스 위, 모달 아래 */
+    /* 중심은 투명하고 테두리로 갈수록 진한 흰색이 되는 방사형 그라디언트 */
+    background: radial-gradient(circle, rgba(255,255,255,0) 35%, rgba(255,255,255,0.85) 100%);
+    opacity: 0;
+    transition: opacity 0.05s linear;
 }
