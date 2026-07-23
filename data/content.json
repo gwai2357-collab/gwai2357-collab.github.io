@@ -1,0 +1,58 @@
+[
+  {
+    "imagePath": "image/image_0014_1440x1600.png",
+    "caption": "첫 번째 작품입니다.",
+    "detailCaption": "이 작품은 2026년에 제작된 첫 번째 시리즈입니다.\n선과 면의 교차를 통해 공간감을 표현했습니다."
+  },
+  {
+    "imagePath": "image/placidplace-sky-4583_512.gif",
+    "caption": "움직이는 GIF 테스트",
+    "detailCaption": "이 GIF는 움직이는 이미지입니다."
+  },
+  {
+    "imagePath": "image/susan-lu4esm-grass-854_512.gif",
+    "caption": "움직이는 GIF 테스트 3",
+    "detailCaption": "이 GIF는 움직이는 이미지입니다."
+  },
+  {
+    "imagePath": "image/mxj_files-star-26586.gif",
+    "caption": "움직이는 GIF 테스트 4",
+    "detailCaption": "이 GIF는 움직이는 이미지입니다."
+  },
+  {
+    "imagePath": "image/image_0544_2550x800.png",
+    "caption": "다섯 번째 작품입니다.",
+    "detailCaption": "이 작품은 2026년에 제작된 다섯 번째 시리즈입니다.\n선과 면의 교차를 통해 공간감을 표현했습니다."
+  },
+  {
+    "imagePath": "image/sergeigussev-waterfall-26552_512.gif",
+    "caption": "움직이는 GIF 테스트 6",
+    "detailCaption": "이 GIF는 움직이는 이미지입니다."
+  },
+  {
+    "imagePath": "image/image_0018_2550x800.png",
+    "caption": "움직이는 GIF 테스트 7",
+    "detailCaption": "이 GIF는 움직이는 이미지입니다."
+  },
+  {
+    "imagePath": "image/susan-lu4esm-grass-854_512.gif",
+    "caption": "움직이는 GIF 테스트 8",
+    "detailCaption": "이 GIF는 움직이는 이미지입니다."
+  },
+   {
+    "imagePath": "image/image_0119_2550x800.png",
+    "caption": "움직이는 GIF 테스트 7",
+    "detailCaption": "이 GIF는 움직이는 이미지입니다."
+  },
+  {
+    "imagePath": "image/image_0620_2550x1200.png",
+    "caption": "움직이는 GIF 테스트 8",
+    "detailCaption": "이 GIF는 움직이는 이미지입니다."
+  },
+  {
+    "imagePath": "image/sergeigussev-waterfall-26552_512.gif",
+    "caption": "움직이는 GIF 테스트 9",
+    "detailCaption": "이 GIF는 움직이는 이미지입니다."
+  }
+
+]
